@@ -34,6 +34,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash/fnv"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -110,4 +111,40 @@ func ListUSBDevices() ([]*Device, error) {
 		result = append(result, &Device{Handle: device})
 	}
 	return result, nil
+}
+
+type DeviceDB struct {
+	devices map[string]*Device
+}
+
+func NewDeviceDB() DeviceDB {
+	db := DeviceDB{}
+	db.devices = make(map[string]*Device)
+	return db
+}
+
+func (db DeviceDB) Reconcile() error {
+	devices, err := ListUSBDevices()
+	if err != nil {
+		return err
+	}
+
+	digests = make([]string, 0, len(devices))
+	for _, device := range devices {
+		digest := device.Digest()
+		digests = append(digests, digest)
+		if _, exists := db.devices[digest]; exists {
+			continue
+		}
+		db.devices[digest] = device
+		added = append(added, device)
+	}
+	for digest := range db.devices {
+		if slices.Contains(digests, digest) {
+			continue
+		}
+		delete(digests, digest)
+	}
+
+	return added, removed, nil
 }
