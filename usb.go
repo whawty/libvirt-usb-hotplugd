@@ -129,7 +129,7 @@ func (db DeviceDB) Reconcile() error {
 		return err
 	}
 
-	digests = make([]string, 0, len(devices))
+	digests := make([]string, 0, len(devices))
 	for _, device := range devices {
 		digest := device.Digest()
 		digests = append(digests, digest)
@@ -137,14 +137,13 @@ func (db DeviceDB) Reconcile() error {
 			continue
 		}
 		db.devices[digest] = device
-		added = append(added, device)
 	}
 	for digest := range db.devices {
 		if slices.Contains(digests, digest) {
 			continue
 		}
-		delete(digests, digest)
+		delete(db.devices, digest)
 	}
 
-	return added, removed, nil
+	return nil
 }

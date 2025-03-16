@@ -34,10 +34,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/url"
 	"os"
-
-	"github.com/digitalocean/go-libvirt"
 )
 
 var (
@@ -66,32 +63,15 @@ func run(conf *Config) {
 	}
 
 	// list running virtual machines
-	uri, _ := url.Parse(string(libvirt.QEMUSystem))
-	l, err := libvirt.ConnectToURI(uri)
+	machines, err := ListVirtualMachines()
 	if err != nil {
-		wl.Fatalf("failed to connect: %v", err)
+		wl.Fatalf("failed to list virtual machines: %v", err)
 	}
-
-	v, err := l.ConnectGetLibVersion()
-	if err != nil {
-		wl.Fatalf("failed to retrieve libvirt version: %v", err)
-	}
-	wl.Println("Libvirt-Version:", v)
-
-	flags := libvirt.ConnectListDomainsRunning
-	domains, _, err := l.ConnectListAllDomains(1, flags)
-	if err != nil {
-		wl.Fatalf("failed to retrieve domains: %v", err)
-	}
-
-	wl.Println("ID\tName\t\tUUID")
-	wl.Printf("--------------------------------------------------------\n")
-	for _, d := range domains {
-		wl.Printf("%d\t%s\t%x\n", d.ID, d.Name, d.UUID)
-	}
-
-	if err = l.Disconnect(); err != nil {
-		wl.Fatalf("failed to disconnect: %v", err)
+	for _, m := range machines {
+		wl.Printf("VM %s (ID=%d, UUID=%x)\n", m.Domain.Name, m.Domain.ID, m.Domain.UUID)
+		for alias, device := range m.Devices {
+			wl.Printf(" assigned device '%s': Bus %03d Device %03d: ID %04x:%04x", alias, device.Bus, device.Device, device.VendorID, device.ProductID)
+		}
 	}
 }
 
