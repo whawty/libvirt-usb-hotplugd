@@ -34,7 +34,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
+
+	"github.com/Emposat/usb"
+	"github.com/digitalocean/go-libvirt"
 )
 
 var (
@@ -45,6 +49,48 @@ var (
 func init() {
 	if _, exists := os.LookupEnv("WHAWTY_LIBVIRT_USB_HOTPLUGD_DEBUG"); exists {
 		wdl.SetOutput(os.Stderr)
+	}
+}
+
+func run(conf *Config) {
+	wdl.Printf("got config: %+v", conf)
+
+	// list usb devices
+	devices, err := usb.List()
+	if err != nil {
+		wl.Fatalf("failed to list usb devices: %v", err)
+	}
+	for _, d := range devices {
+		wl.Printf("Bus %03d Device %03d: ID %04x:%04x %s %s\n", d.Bus, d.Device, d.Vendor.ID, d.Product.ID, d.Vendor.Name(), d.Product.Name())
+	}
+
+	// list running virtual machines
+	uri, _ := url.Parse(string(libvirt.QEMUSystem))
+	l, err := libvirt.ConnectToURI(uri)
+	if err != nil {
+		wl.Fatalf("failed to connect: %v", err)
+	}
+
+	v, err := l.ConnectGetLibVersion()
+	if err != nil {
+		wl.Fatalf("failed to retrieve libvirt version: %v", err)
+	}
+	wl.Println("Libvirt-Version:", v)
+
+	flags := libvirt.ConnectListDomainsRunning
+	domains, _, err := l.ConnectListAllDomains(1, flags)
+	if err != nil {
+		wl.Fatalf("failed to retrieve domains: %v", err)
+	}
+
+	wl.Println("ID\tName\t\tUUID")
+	wl.Printf("--------------------------------------------------------\n")
+	for _, d := range domains {
+		wl.Printf("%d\t%s\t%x\n", d.ID, d.Name, d.UUID)
+	}
+
+	if err = l.Disconnect(); err != nil {
+		wl.Fatalf("failed to disconnect: %v", err)
 	}
 }
 
@@ -61,6 +107,5 @@ func main() {
 	}
 
 	wl.Printf("starting...")
-
-	wdl.Printf("got config: %+v", conf)
+	run(conf)
 }
