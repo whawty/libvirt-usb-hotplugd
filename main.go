@@ -37,7 +37,6 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/Emposat/usb"
 	"github.com/digitalocean/go-libvirt"
 )
 
@@ -56,12 +55,14 @@ func run(conf *Config) {
 	wdl.Printf("got config: %+v", conf)
 
 	// list usb devices
-	devices, err := usb.List()
+	devices, err := ListUSBDevices()
 	if err != nil {
 		wl.Fatalf("failed to list usb devices: %v", err)
 	}
 	for _, d := range devices {
-		wl.Printf("Bus %03d Device %03d: ID %04x:%04x %s %s\n", d.Bus, d.Device, d.Vendor.ID, d.Product.ID, d.Vendor.Name(), d.Product.Name())
+		xml, _ := d.HostDevXML()
+		wl.Printf("Bus %03d Device %03d: ID %04x:%04x %s %s\n", d.Handle.Bus, d.Handle.Device, d.Handle.Vendor.ID, d.Handle.Product.ID, d.Handle.Vendor.Name(), d.Handle.Product.Name())
+		wl.Printf("Digest('%s'): %s", d.Digest(), xml)
 	}
 
 	// list running virtual machines

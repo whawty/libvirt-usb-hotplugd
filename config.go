@@ -40,8 +40,8 @@ import (
 type DeviceMatcher struct {
 	Bus         *int    `yaml:"bus"`
 	Device      *int    `yaml:"device"`
-	VendorID    *int    `yaml:"vendor-id"`
-	ProductID   *int    `yaml:"product-id"`
+	VendorID    *uint16 `yaml:"vendor-id"`
+	ProductID   *uint16 `yaml:"product-id"`
 	VendorName  *string `yaml:"vendor-name"`
 	ProductName *string `yaml:"product-name"`
 }
@@ -68,5 +68,6 @@ func readConfig(configfile string) (*Config, error) {
 	if err = decoder.Decode(c); err != nil {
 		return nil, fmt.Errorf("Error parsing config file: %s", err)
 	}
+	// TODO: sanity check matchers??
 	return c, nil
 }
