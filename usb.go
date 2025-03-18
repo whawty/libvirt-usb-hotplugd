@@ -31,57 +31,21 @@
 package main
 
 import (
-	"slices"
-
 	"github.com/Emposat/usb"
 	// "github.com/citilinkru/libudev"
 )
 
-func ListUSBDevices() ([]Device, error) {
+func ListUSBDevices() (map[string]Device, error) {
 	devices, err := usb.List()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]Device, 0, len(devices))
+	result := make(map[string]Device)
 	for _, device := range devices {
+		d := NewDeviceFromLibUSB(device)
 		// TODO: enhance Device with attributes from udev
-		result = append(result, NewDeviceFromLibUSB(device))
+		result[d.Slug()] = d
 	}
 	return result, nil
-}
-
-type DeviceDB struct {
-	devices map[string]Device
-}
-
-func NewDeviceDB() DeviceDB {
-	db := DeviceDB{}
-	db.devices = make(map[string]Device)
-	return db
-}
-
-func (db DeviceDB) Reconcile() error {
-	devices, err := ListUSBDevices()
-	if err != nil {
-		return err
-	}
-
-	slugs := make([]string, 0, len(devices))
-	for _, device := range devices {
-		slug := device.Slug()
-		slugs = append(slugs, slug)
-		if _, exists := db.devices[slug]; exists {
-			continue
-		}
-		db.devices[slug] = device
-	}
-	for slug := range db.devices {
-		if slices.Contains(slugs, slug) {
-			continue
-		}
-		delete(db.devices, slug)
-	}
-
-	return nil
 }

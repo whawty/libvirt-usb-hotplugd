@@ -31,6 +31,7 @@
 package main
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -43,6 +44,10 @@ type Machine struct {
 	Devices map[string]Device
 }
 
+func (m Machine) String() string {
+	return fmt.Sprintf("%s (ID=%d, UUID=%x): %d attached devices", m.Domain.Name, m.Domain.ID, m.Domain.UUID, len(m.Devices))
+}
+
 func MachineFromLibvirtDomain(l *libvirt.Libvirt, domain libvirt.Domain) (*Machine, error) {
 	domxml, err := l.DomainGetXMLDesc(domain, 0)
 	if err != nil {
@@ -53,17 +58,16 @@ func MachineFromLibvirtDomain(l *libvirt.Libvirt, domain libvirt.Domain) (*Machi
 	if err != nil {
 		return nil, err
 	}
+	hostdevs := xmlquery.Find(domdata, "/domain/devices/hostdev[@type='usb']")
 
 	m := &Machine{Domain: domain}
 	m.Devices = make(map[string]Device)
-	hostdevs := xmlquery.Find(domdata, "/domain/devices/hostdev[@type='usb']")
 	for _, hostdev := range hostdevs {
-		alias := hostdev.SelectElement("alias").SelectAttr("name")
 		dev, err := NewDeviceFromLibVirtHostdev(hostdev)
 		if err != nil {
 			return nil, err
 		}
-		m.Devices[alias] = dev
+		m.Devices[dev.Slug()] = dev
 	}
 	return m, nil
 }
@@ -81,7 +85,7 @@ func NewVirshConnection() (*libvirt.Libvirt, error) {
 	return l, nil
 }
 
-func ListVirtualMachines() ([]*Machine, error) {
+func ListVirtualMachines() (map[string]Machine, error) {
 	l, err := NewVirshConnection()
 	if err != nil {
 		return nil, err
@@ -93,19 +97,19 @@ func ListVirtualMachines() ([]*Machine, error) {
 		return nil, err
 	}
 
-	result := make([]*Machine, 0, len(domains))
+	machines := make(map[string]Machine)
 	for _, domain := range domains {
-		m, err := MachineFromLibvirtDomain(l, domain)
+		machine, err := MachineFromLibvirtDomain(l, domain)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, m)
+		machines[domain.Name] = *machine
 	}
 
-	return result, nil
+	return machines, nil
 }
 
-func AttachDeviceToVirtualMachine(machine *Machine, device Device) error {
+func AttachDeviceToVirtualMachine(machine Machine, device Device) error {
 	l, err := NewVirshConnection()
 	if err != nil {
 		return err
@@ -119,7 +123,7 @@ func AttachDeviceToVirtualMachine(machine *Machine, device Device) error {
 	return l.DomainAttachDevice(machine.Domain, xml)
 }
 
-func DetachDeviceFromVirtualMachine(machine *Machine, device Device) error {
+func DetachDeviceFromVirtualMachine(machine Machine, device Device) error {
 	l, err := NewVirshConnection()
 	if err != nil {
 		return err

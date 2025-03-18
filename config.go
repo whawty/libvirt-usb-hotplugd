@@ -33,6 +33,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -50,6 +51,7 @@ type MachineConfig struct {
 }
 
 type Config struct {
+	Interval time.Duration            `yaml:"interval"`
 	Machines map[string]MachineConfig `yaml:"machines"`
 }
 
@@ -66,6 +68,9 @@ func readConfig(configfile string) (*Config, error) {
 	c := &Config{}
 	if err = decoder.Decode(c); err != nil {
 		return nil, fmt.Errorf("Error parsing config file: %s", err)
+	}
+	if c.Interval == 0 {
+		c.Interval = 5 * time.Second
 	}
 	// TODO: sanity check matchers??
 	return c, nil

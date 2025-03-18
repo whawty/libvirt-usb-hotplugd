@@ -35,6 +35,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 )
 
 var (
@@ -48,30 +49,72 @@ func init() {
 	}
 }
 
+func reconcile(conf *Config, devices map[string]Device, machines map[string]Machine) {
+	// attach new devices
+	for mname, mconf := range conf.Machines {
+		machine, exists := machines[mname]
+		if !exists {
+			wl.Printf("skipping device matchers for unknown machine: %s", mname)
+			continue
+		}
+		for _, matcher := range mconf.DeviceMatchers {
+			for slug, device := range devices {
+				if device.Matches(matcher) {
+					if _, exists := machine.Devices[slug]; exists {
+						wdl.Printf("device '%s' is already attached to machine '%s'", device.String(), mname)
+						continue
+					}
+					err := AttachDeviceToVirtualMachine(machine, device)
+					if err != nil {
+						wl.Printf("failed to attach device '%s' to machine '%s': %v", device.String(), mname, err)
+					} else {
+						wl.Printf("sucessfully attached device '%s' to machine '%s'", device.String(), mname)
+					}
+				}
+			}
+		}
+	}
+
+	// detach stale devices
+	for mname, machine := range machines {
+		for _, device := range machine.Devices {
+			if _, exists := devices[device.Slug()]; !exists {
+				err := DetachDeviceFromVirtualMachine(machine, device)
+				if err != nil {
+					wl.Printf("failed to detach device '%s' from machine '%s': %v", device.String(), mname, err)
+				} else {
+					wl.Printf("successfully detached device '%s' from machine '%s'", device.String(), mname)
+				}
+			}
+		}
+	}
+}
+
 func run(conf *Config) {
 	wdl.Printf("got config: %+v", conf)
 
-	// list usb devices
-	devices, err := ListUSBDevices()
-	if err != nil {
-		wl.Fatalf("failed to list usb devices: %v", err)
-	}
-	for _, d := range devices {
-		xml, _ := d.HostDevXML()
-		wl.Printf(d.String())
-		wl.Printf("Slug('%s'): %s", d.Slug(), xml)
-	}
-
-	// list running virtual machines
-	machines, err := ListVirtualMachines()
-	if err != nil {
-		wl.Fatalf("failed to list virtual machines: %v", err)
-	}
-	for _, m := range machines {
-		wl.Printf("VM %s (ID=%d, UUID=%x)\n", m.Domain.Name, m.Domain.ID, m.Domain.UUID)
-		for alias, device := range m.Devices {
-			wl.Printf(" assigned device '%s': %s", alias, device.String())
+	for {
+		// list usb devices
+		devices, err := ListUSBDevices()
+		if err != nil {
+			wl.Printf("failed to list usb devices: %v", err)
 		}
+		for _, device := range devices {
+			wdl.Printf("found Device: %s", device.String())
+		}
+
+		// list running virtual machines
+		machines, err := ListVirtualMachines()
+		if err != nil {
+			wl.Printf("failed to list virtual machines: %v", err)
+		}
+		for _, machine := range machines {
+			wdl.Printf("found VM: %s\n", machine.String())
+		}
+
+		// attach/detach devices
+		reconcile(conf, devices, machines)
+		time.Sleep(conf.Interval)
 	}
 }
 
