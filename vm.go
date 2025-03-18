@@ -68,9 +68,21 @@ func MachineFromLibvirtDomain(l *libvirt.Libvirt, domain libvirt.Domain) (*Machi
 	return m, nil
 }
 
-func ListVirtualMachines() ([]*Machine, error) {
-	uri, _ := url.Parse(string(libvirt.QEMUSystem))
+func NewVirshConnection() (*libvirt.Libvirt, error) {
+	uri, err := url.Parse(string(libvirt.QEMUSystem))
+	if err != nil {
+		return nil, err
+	}
+
 	l, err := libvirt.ConnectToURI(uri)
+	if err != nil {
+		return nil, err
+	}
+	return l, nil
+}
+
+func ListVirtualMachines() ([]*Machine, error) {
+	l, err := NewVirshConnection()
 	if err != nil {
 		return nil, err
 	}
@@ -91,4 +103,32 @@ func ListVirtualMachines() ([]*Machine, error) {
 	}
 
 	return result, nil
+}
+
+func AttachDeviceToVirtualMachine(machine *Machine, device Device) error {
+	l, err := NewVirshConnection()
+	if err != nil {
+		return err
+	}
+	defer l.Disconnect()
+
+	xml, err := device.HostDevXML()
+	if err != nil {
+		return err
+	}
+	return l.DomainAttachDevice(machine.Domain, xml)
+}
+
+func DetachDeviceFromVirtualMachine(machine *Machine, device Device) error {
+	l, err := NewVirshConnection()
+	if err != nil {
+		return err
+	}
+	defer l.Disconnect()
+
+	xml, err := device.HostDevXML()
+	if err != nil {
+		return err
+	}
+	return l.DomainDetachDevice(machine.Domain, xml)
 }
