@@ -103,13 +103,11 @@ func NewDeviceFromLibVirtHostdev(hostdev *xmlquery.Node) (d Device, err error) {
 }
 
 func (d *Device) String() string {
-	VendorName := "unknown"
-	ProductName := "unknown"
+	names := ""
 	if d.libusb != nil {
-		VendorName = d.libusb.Vendor.Name()
-		ProductName = d.libusb.Product.Name()
+		names = " " + d.libusb.Vendor.Name() + " " + d.libusb.Product.Name()
 	}
-	return fmt.Sprintf("Bus %03d Device %03d: %04x:%04x %s %s", d.Bus, d.Device, d.VendorID, d.ProductID, VendorName, ProductName)
+	return fmt.Sprintf("Bus %03d Device %03d: %04x:%04x%s", d.Bus, d.Device, d.VendorID, d.ProductID, names)
 }
 
 func (d *Device) Slug() string {
