@@ -31,95 +31,33 @@
 package main
 
 import (
-	"encoding/base64"
-	"fmt"
-	"hash/fnv"
 	"slices"
-	"strings"
-	"text/template"
 
 	"github.com/Emposat/usb"
+	// "github.com/citilinkru/libudev"
 )
 
-const (
-	hostdevXMLTemplateText = `
-    <hostdev mode='subsystem' type='usb' managed='yes'>
-      <source startupPolicy='optional'>
-        <vendor id='{{ printf "0x%04x" .Handle.Vendor.ID }}' />
-        <product id='{{ printf "0x%04x" .Handle.Product.ID }}' />
-        <address bus='{{ printf "%d" .Handle.Bus }}' device='{{ printf "%d" .Handle.Device }}' />
-      </source>
-      <alias name='whawty-{{ .Digest }}'/>
-    </hostdev>
-`
-)
-
-var (
-	hostdevXMLTemplate = template.Must(template.New("attach-device-xml").Parse(hostdevXMLTemplateText))
-)
-
-type Device struct {
-	Handle *usb.Device
-}
-
-func (d *Device) Digest() string {
-	hash := fnv.New128a()
-	slug := fmt.Sprintf("%03d/%03d: %04x:%04x %s %s", d.Handle.Bus, d.Handle.Device, d.Handle.Vendor.ID, d.Handle.Product.ID, d.Handle.Vendor.Name(), d.Handle.Product.Name())
-	_, _ = hash.Write([]byte(slug)) // hash.Write() never returns an error
-	return base64.RawURLEncoding.EncodeToString(hash.Sum(nil))
-
-}
-
-func (d *Device) HostDevXML() (string, error) {
-	var buf strings.Builder
-	if err := hostdevXMLTemplate.Execute(&buf, d); err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
-func (d *Device) Matches(matcher DeviceMatcher) bool {
-	if matcher.Bus != nil && *matcher.Bus != d.Handle.Bus {
-		return false
-	}
-	if matcher.Device != nil && *matcher.Device != d.Handle.Device {
-		return false
-	}
-	if matcher.VendorID != nil && *matcher.VendorID != d.Handle.Vendor.ID {
-		return false
-	}
-	if matcher.ProductID != nil && *matcher.ProductID != d.Handle.Product.ID {
-		return false
-	}
-	if matcher.VendorName != nil && *matcher.VendorName != d.Handle.Vendor.Name() {
-		return false
-	}
-	if matcher.ProductName != nil && *matcher.ProductName != d.Handle.Product.Name() {
-		return false
-	}
-	return true
-}
-
-func ListUSBDevices() ([]*Device, error) {
+func ListUSBDevices() ([]Device, error) {
 	devices, err := usb.List()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*Device, 0, len(devices))
+	result := make([]Device, 0, len(devices))
 	for _, device := range devices {
-		result = append(result, &Device{Handle: device})
+		// TODO: enhance Device with attributes from udev
+		result = append(result, NewDeviceFromLibUSB(device))
 	}
 	return result, nil
 }
 
 type DeviceDB struct {
-	devices map[string]*Device
+	devices map[string]Device
 }
 
 func NewDeviceDB() DeviceDB {
 	db := DeviceDB{}
-	db.devices = make(map[string]*Device)
+	db.devices = make(map[string]Device)
 	return db
 }
 
@@ -129,20 +67,20 @@ func (db DeviceDB) Reconcile() error {
 		return err
 	}
 
-	digests := make([]string, 0, len(devices))
+	slugs := make([]string, 0, len(devices))
 	for _, device := range devices {
-		digest := device.Digest()
-		digests = append(digests, digest)
-		if _, exists := db.devices[digest]; exists {
+		slug := device.Slug()
+		slugs = append(slugs, slug)
+		if _, exists := db.devices[slug]; exists {
 			continue
 		}
-		db.devices[digest] = device
+		db.devices[slug] = device
 	}
-	for digest := range db.devices {
-		if slices.Contains(digests, digest) {
+	for slug := range db.devices {
+		if slices.Contains(slugs, slug) {
 			continue
 		}
-		delete(db.devices, digest)
+		delete(db.devices, slug)
 	}
 
 	return nil

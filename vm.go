@@ -32,33 +32,15 @@ package main
 
 import (
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/digitalocean/go-libvirt"
 )
 
-type LibvirtUSBHostdevSource struct {
-	VendorID  uint16
-	ProductID uint16
-	Bus       int
-	Device    int
-}
-
 type Machine struct {
 	Domain  libvirt.Domain
-	Devices map[string]LibvirtUSBHostdevSource
-}
-
-func uint16From0xString(str string) (uint16, error) {
-	val, err := strconv.ParseUint(strings.TrimPrefix(str, "0x"), 16, 16)
-	return uint16(val), err
-}
-
-func intFromString(str string) (int, error) {
-	val, err := strconv.ParseInt(str, 10, 32)
-	return int(val), err
+	Devices map[string]Device
 }
 
 func MachineFromLibvirtDomain(l *libvirt.Libvirt, domain libvirt.Domain) (*Machine, error) {
@@ -73,17 +55,15 @@ func MachineFromLibvirtDomain(l *libvirt.Libvirt, domain libvirt.Domain) (*Machi
 	}
 
 	m := &Machine{Domain: domain}
-	m.Devices = make(map[string]LibvirtUSBHostdevSource)
+	m.Devices = make(map[string]Device)
 	hostdevs := xmlquery.Find(domdata, "/domain/devices/hostdev[@type='usb']")
 	for _, hostdev := range hostdevs {
 		alias := hostdev.SelectElement("alias").SelectAttr("name")
-		src := LibvirtUSBHostdevSource{}
-		// TODO: handle errors!!!
-		src.VendorID, _ = uint16From0xString(hostdev.SelectElement("source").SelectElement("vendor").SelectAttr("id"))
-		src.ProductID, _ = uint16From0xString(hostdev.SelectElement("source").SelectElement("product").SelectAttr("id"))
-		src.Bus, _ = intFromString(hostdev.SelectElement("source").SelectElement("address").SelectAttr("bus"))
-		src.Device, _ = intFromString(hostdev.SelectElement("source").SelectElement("address").SelectAttr("device"))
-		m.Devices[alias] = src
+		dev, err := NewDeviceFromLibVirtHostdev(hostdev)
+		if err != nil {
+			return nil, err
+		}
+		m.Devices[alias] = dev
 	}
 	return m, nil
 }

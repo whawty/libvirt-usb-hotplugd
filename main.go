@@ -58,8 +58,8 @@ func run(conf *Config) {
 	}
 	for _, d := range devices {
 		xml, _ := d.HostDevXML()
-		wl.Printf("Bus %03d Device %03d: ID %04x:%04x %s %s\n", d.Handle.Bus, d.Handle.Device, d.Handle.Vendor.ID, d.Handle.Product.ID, d.Handle.Vendor.Name(), d.Handle.Product.Name())
-		wl.Printf("Digest('%s'): %s", d.Digest(), xml)
+		wl.Printf(d.String())
+		wl.Printf("Slug('%s'): %s", d.Slug(), xml)
 	}
 
 	// list running virtual machines
@@ -70,7 +70,7 @@ func run(conf *Config) {
 	for _, m := range machines {
 		wl.Printf("VM %s (ID=%d, UUID=%x)\n", m.Domain.Name, m.Domain.ID, m.Domain.UUID)
 		for alias, device := range m.Devices {
-			wl.Printf(" assigned device '%s': Bus %03d Device %03d: ID %04x:%04x", alias, device.Bus, device.Device, device.VendorID, device.ProductID)
+			wl.Printf(" assigned device '%s': %s", alias, device.String())
 		}
 	}
 }

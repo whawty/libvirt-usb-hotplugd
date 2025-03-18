@@ -38,12 +38,11 @@ import (
 )
 
 type DeviceMatcher struct {
-	Bus         *int    `yaml:"bus"`
-	Device      *int    `yaml:"device"`
-	VendorID    *uint16 `yaml:"vendor-id"`
-	ProductID   *uint16 `yaml:"product-id"`
-	VendorName  *string `yaml:"vendor-name"`
-	ProductName *string `yaml:"product-name"`
+	Bus       *int    `yaml:"bus"`
+	Device    *int    `yaml:"device"`
+	VendorID  *uint16 `yaml:"vendor-id"`
+	ProductID *uint16 `yaml:"product-id"`
+	// TODO: add matchers for udev attributes
 }
 
 type MachineConfig struct {
