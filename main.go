@@ -94,10 +94,13 @@ func run(conf *Config) {
 	wdl.Printf("got config: %+v", conf)
 
 	for {
+		time.Sleep(conf.Interval)
+
 		// list usb devices
 		devices, err := ListUSBDevices()
 		if err != nil {
 			wl.Printf("failed to list usb devices: %v", err)
+			continue
 		}
 		for _, device := range devices {
 			wdl.Printf("found Device: %s", device.String())
@@ -107,6 +110,7 @@ func run(conf *Config) {
 		machines, err := ListVirtualMachines()
 		if err != nil {
 			wl.Printf("failed to list virtual machines: %v", err)
+			continue
 		}
 		for _, machine := range machines {
 			wdl.Printf("found VM: %s\n", machine.String())
@@ -114,7 +118,6 @@ func run(conf *Config) {
 
 		// attach/detach devices
 		reconcile(conf, devices, machines)
-		time.Sleep(conf.Interval)
 	}
 }
 
