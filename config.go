@@ -33,6 +33,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -55,6 +57,66 @@ type Config struct {
 	Machines map[string]MachineConfig `yaml:"machines"`
 }
 
+func (conf *Config) loadMachineConfigFromFile(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("Error opening config file: %s", err)
+	}
+	defer file.Close()
+
+	mname := strings.TrimSuffix(filepath.Base(filename), ".yml")
+	mconf := &MachineConfig{}
+
+	decoder := yaml.NewDecoder(file)
+	decoder.KnownFields(true)
+	if err = decoder.Decode(mconf); err != nil {
+		return fmt.Errorf("Error parsing config snippet '%s': %s", filename, err)
+	}
+	if _, exists := conf.Machines[mname]; exists {
+		wdl.Printf("machine '%s' has been found in the global config file as well as in machines.d directory. The latter takes precedence")
+	}
+	conf.Machines[mname] = *mconf
+	return nil
+}
+
+func (conf *Config) loadMachinesConfigFromDirectory(configfile string) error {
+	path, err := filepath.Abs(configfile)
+	if err != nil {
+		return err
+	}
+	machinesDir := filepath.Join(filepath.Dir(path), "machines.d")
+	info, err := os.Stat(machinesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if !info.IsDir() {
+		return nil
+	}
+
+	wdl.Printf("looking for additinal config files in '%s'", machinesDir)
+	files, err := os.ReadDir(machinesDir)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		filename := file.Name()
+		if filepath.Ext(filename) != ".yml" {
+			continue
+		}
+		wdl.Printf("loading machine config from %s", filename)
+		if err = conf.loadMachineConfigFromFile(filepath.Join(machinesDir, filename)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func readConfig(configfile string) (*Config, error) {
 	file, err := os.Open(configfile)
 	if err != nil {
@@ -71,6 +133,9 @@ func readConfig(configfile string) (*Config, error) {
 	}
 	if c.Interval == 0 {
 		c.Interval = 5 * time.Second
+	}
+	if err = c.loadMachinesConfigFromDirectory(configfile); err != nil {
+		return nil, err
 	}
 	// TODO: sanity check matchers??
 	return c, nil
