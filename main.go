@@ -50,13 +50,14 @@ func init() {
 }
 
 func reconcile(conf *Config, devices map[string]Device, machines map[string]Machine) {
-	// attach new devices
 	for mname, mconf := range conf.Machines {
 		machine, exists := machines[mname]
 		if !exists {
-			wl.Printf("skipping device matchers for unknown machine: %s", mname)
+			wdl.Printf("skipping machine '%s' which is found in the configuration but is not running or missing in libvirt", mname)
 			continue
 		}
+
+		// attach new devices
 		for _, matcher := range mconf.DeviceMatchers {
 			for slug, device := range devices {
 				if !device.Matches(matcher) {
@@ -74,18 +75,17 @@ func reconcile(conf *Config, devices map[string]Device, machines map[string]Mach
 				}
 			}
 		}
-	}
 
-	// detach stale devices
-	for mname, machine := range machines {
+		// detach stale devices
 		for _, device := range machine.Devices {
-			if _, exists := devices[device.Slug()]; !exists {
-				err := DetachDeviceFromVirtualMachine(machine, device)
-				if err != nil {
-					wl.Printf("failed to detach device '%s' from machine '%s': %v", device.String(), mname, err)
-				} else {
-					wl.Printf("successfully detached device '%s' from machine '%s'", device.String(), mname)
-				}
+			if _, exists := devices[device.Slug()]; exists {
+				continue
+			}
+			err := DetachDeviceFromVirtualMachine(machine, device)
+			if err != nil {
+				wl.Printf("failed to detach device '%s' from machine '%s': %v", device.String(), mname, err)
+			} else {
+				wl.Printf("successfully detached device '%s' from machine '%s'", device.String(), mname)
 			}
 		}
 	}
@@ -95,6 +95,11 @@ func run(conf *Config) {
 	wdl.Printf("got config: %+v", conf)
 
 	for ; ; time.Sleep(conf.Interval) {
+		if len(conf.Machines) == 0 {
+			// no machines found in config - no need to scan for devices, but keep running in case the config changes
+			continue
+		}
+
 		// list usb devices
 		devices, err := ListUSBDevices()
 		if err != nil {
@@ -126,6 +131,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO: re-read config on SIGHUP
 	conf, err := readConfig(os.Args[1])
 	if err != nil {
 		fmt.Printf("failed to parse config: %v\n", err)
