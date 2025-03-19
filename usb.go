@@ -31,8 +31,10 @@
 package main
 
 import (
+	"time"
+
 	"github.com/Emposat/usb"
-	// "github.com/citilinkru/libudev"
+	"github.com/citilinkru/libudev"
 )
 
 func ListUSBDevices() (map[string]Device, error) {
@@ -47,5 +49,14 @@ func ListUSBDevices() (map[string]Device, error) {
 		// TODO: enhance Device with attributes from udev
 		result[d.Slug()] = d
 	}
+
+	begin := time.Now()
+	if err, _ = libudev.NewScanner().ScanDevices(); err != nil {
+		return nil, err
+	}
+	end := time.Now()
+
+	wdl.Printf("udev scan took: %s\n", end.Sub(begin))
+
 	return result, nil
 }
