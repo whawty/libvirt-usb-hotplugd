@@ -87,16 +87,18 @@ func intFromString(str string) (int, error) {
 }
 
 func NewDeviceFromLibVirtHostdev(hostdev *xmlquery.Node) (d Device, err error) {
-	if d.VendorID, err = uint16From0xString(hostdev.SelectElement("source").SelectElement("vendor").SelectAttr("id")); err != nil {
+	src := hostdev.SelectElement("source")
+	if d.VendorID, err = uint16From0xString(src.SelectElement("vendor").SelectAttr("id")); err != nil {
 		return
 	}
-	if d.ProductID, err = uint16From0xString(hostdev.SelectElement("source").SelectElement("product").SelectAttr("id")); err != nil {
+	if d.ProductID, err = uint16From0xString(src.SelectElement("product").SelectAttr("id")); err != nil {
 		return
 	}
-	if d.Bus, err = intFromString(hostdev.SelectElement("source").SelectElement("address").SelectAttr("bus")); err != nil {
+	addr := src.SelectElement("address")
+	if d.Bus, err = intFromString(addr.SelectAttr("bus")); err != nil {
 		return
 	}
-	if d.Device, err = intFromString(hostdev.SelectElement("source").SelectElement("address").SelectAttr("device")); err != nil {
+	if d.Device, err = intFromString(addr.SelectAttr("device")); err != nil {
 		return
 	}
 	return
