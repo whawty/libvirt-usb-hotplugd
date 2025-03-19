@@ -88,13 +88,32 @@ func intFromString(str string) (int, error) {
 
 func NewDeviceFromLibVirtHostdev(hostdev *xmlquery.Node) (d Device, err error) {
 	src := hostdev.SelectElement("source")
-	if d.VendorID, err = uint16From0xString(src.SelectElement("vendor").SelectAttr("id")); err != nil {
+	if src == nil {
+		err = fmt.Errorf("hostdev has no 'source' element")
 		return
 	}
-	if d.ProductID, err = uint16From0xString(src.SelectElement("product").SelectAttr("id")); err != nil {
+	vendor := src.SelectElement("vendor")
+	if vendor == nil {
+		err = fmt.Errorf("hostdev source has no 'vendor' element")
+		return
+	}
+	product := src.SelectElement("product")
+	if vendor == nil {
+		err = fmt.Errorf("hostdev source has no 'product' element")
 		return
 	}
 	addr := src.SelectElement("address")
+	if addr == nil {
+		err = fmt.Errorf("hostdev source has no 'address' element")
+		return
+	}
+
+	if d.VendorID, err = uint16From0xString(vendor.SelectAttr("id")); err != nil {
+		return
+	}
+	if d.ProductID, err = uint16From0xString(product.SelectAttr("id")); err != nil {
+		return
+	}
 	if d.Bus, err = intFromString(addr.SelectAttr("bus")); err != nil {
 		return
 	}
