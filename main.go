@@ -93,9 +93,7 @@ func reconcile(conf *Config, devices map[string]Device, machines map[string]Mach
 func run(conf *Config) {
 	wdl.Printf("got config: %+v", conf)
 
-	for {
-		time.Sleep(conf.Interval)
-
+	for ; ; time.Sleep(conf.Interval) {
 		// list usb devices
 		devices, err := ListUSBDevices()
 		if err != nil {
