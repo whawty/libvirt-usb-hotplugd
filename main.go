@@ -125,18 +125,18 @@ func main() {
 		os.Exit(1)
 	}
 	configfile := os.Args[1]
-
 	conf, err := readConfig(configfile)
 	if err != nil {
 		fmt.Printf("failed to parse config: %v\n", err)
 		os.Exit(1)
 	}
+	wl.Printf("starting...")
+	// do one intial run so potential problems show up immediatly
+	run(conf)
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
-
 	ticker := time.NewTicker(conf.Interval)
-
-	wl.Printf("starting...")
 	for {
 		select {
 		case signal := <-sigs:
