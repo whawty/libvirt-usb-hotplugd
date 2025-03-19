@@ -35,6 +35,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -92,37 +94,29 @@ func reconcile(conf *Config, devices map[string]Device, machines map[string]Mach
 }
 
 func run(conf *Config) {
-	wdl.Printf("got config: %+v", conf)
-
-	for ; ; time.Sleep(conf.Interval) {
-		if len(conf.Machines) == 0 {
-			// no machines found in config - no need to scan for devices, but keep running in case the config changes
-			continue
-		}
-
-		// list usb devices
-		devices, err := ListUSBDevices()
-		if err != nil {
-			wl.Printf("failed to list usb devices: %v", err)
-			continue
-		}
-		for _, device := range devices {
-			wdl.Printf("found Device: %s", device.String())
-		}
-
-		// list running virtual machines
-		machines, err := ListVirtualMachines()
-		if err != nil {
-			wl.Printf("failed to list virtual machines: %v", err)
-			continue
-		}
-		for _, machine := range machines {
-			wdl.Printf("found VM: %s\n", machine.String())
-		}
-
-		// attach/detach devices
-		reconcile(conf, devices, machines)
+	// list usb devices
+	devices, err := ListUSBDevices()
+	if err != nil {
+		wl.Printf("failed to list usb devices: %v", err)
+		return
 	}
+	for _, device := range devices {
+		wdl.Printf("found Device: %s", device.String())
+	}
+
+	// list running virtual machines
+	machines, err := ListVirtualMachines()
+	if err != nil {
+		wl.Printf("failed to list virtual machines: %v", err)
+		return
+	}
+	for _, machine := range machines {
+		wdl.Printf("found VM: %s\n", machine.String())
+	}
+
+	// attach/detach devices
+	reconcile(conf, devices, machines)
+
 }
 
 func main() {
@@ -130,14 +124,44 @@ func main() {
 		fmt.Printf("Usage: %s <config-file>\n", os.Args[0])
 		os.Exit(1)
 	}
+	configfile := os.Args[1]
 
-	// TODO: re-read config on SIGHUP
-	conf, err := readConfig(os.Args[1])
+	conf, err := readConfig(configfile)
 	if err != nil {
 		fmt.Printf("failed to parse config: %v\n", err)
 		os.Exit(1)
 	}
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
+
+	ticker := time.NewTicker(conf.Interval)
 
 	wl.Printf("starting...")
-	run(conf)
+	for {
+		select {
+		case signal := <-sigs:
+			if signal == syscall.SIGHUP {
+				newconf, err := readConfig(configfile)
+				if err != nil {
+					wl.Printf("failed to parse config: %v, keeping old configuration", err)
+					continue
+				}
+				if newconf.Interval != conf.Interval {
+					ticker.Reset(newconf.Interval)
+				}
+				conf = newconf
+				wl.Printf("successfully reloaded configuration from: %s", configfile)
+				continue
+			}
+			wl.Printf("closing after receiving signal: %s", signal.String())
+			return
+		case <-ticker.C:
+			if len(conf.Machines) == 0 {
+				// no machines found in config - no need to scan for devices, but keep running in case the config changes
+				continue
+			}
+			run(conf)
+		}
+
+	}
 }
