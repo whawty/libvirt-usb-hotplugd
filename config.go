@@ -73,7 +73,7 @@ func (conf *Config) loadMachineConfigFromFile(filename string) error {
 		return fmt.Errorf("Error parsing config snippet '%s': %s", filename, err)
 	}
 	if _, exists := conf.Machines[mname]; exists {
-		wdl.Printf("machine '%s' has been found in the global config file as well as in machines.d directory. The latter takes precedence", mname)
+		wl.Printf("machine '%s' has been found in the global config file as well as in machines.d directory. The latter takes precedence", mname)
 	}
 	conf.Machines[mname] = *mconf
 	return nil
