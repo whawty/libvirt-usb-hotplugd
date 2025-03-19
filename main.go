@@ -59,17 +59,18 @@ func reconcile(conf *Config, devices map[string]Device, machines map[string]Mach
 		}
 		for _, matcher := range mconf.DeviceMatchers {
 			for slug, device := range devices {
-				if device.Matches(matcher) {
-					if _, exists := machine.Devices[slug]; exists {
-						wdl.Printf("device '%s' is already attached to machine '%s'", device.String(), mname)
-						continue
-					}
-					err := AttachDeviceToVirtualMachine(machine, device)
-					if err != nil {
-						wl.Printf("failed to attach device '%s' to machine '%s': %v", device.String(), mname, err)
-					} else {
-						wl.Printf("sucessfully attached device '%s' to machine '%s'", device.String(), mname)
-					}
+				if !device.Matches(matcher) {
+					continue
+				}
+				if _, exists := machine.Devices[slug]; exists {
+					wdl.Printf("device '%s' is already attached to machine '%s'", device.String(), mname)
+					continue
+				}
+				err := AttachDeviceToVirtualMachine(machine, device)
+				if err != nil {
+					wl.Printf("failed to attach device '%s' to machine '%s': %v", device.String(), mname, err)
+				} else {
+					wl.Printf("sucessfully attached device '%s' to machine '%s'", device.String(), mname)
 				}
 			}
 		}
