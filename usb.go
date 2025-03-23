@@ -31,9 +31,128 @@
 package main
 
 import (
+	"bufio"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"syscall"
+
 	"github.com/Emposat/usb"
-	// "github.com/citilinkru/libudev"
+	"golang.org/x/sys/unix"
 )
+
+const (
+	devBusUSBBasePath     = "/dev/bus/usb"
+	udevDataBasePath      = "/run/udev/data"
+	sysfsDevBlockBasePath = "/sys/dev/block"
+	sysfsDevCharBasePath  = "/sys/dev/char"
+)
+
+func USBDeviceToSysfsDevicesAndUdevDataPath(dev Device) (string, string, error) {
+	devBusUSBPath := filepath.Join(devBusUSBBasePath, fmt.Sprintf("%03d/%03d", dev.Bus, dev.Device))
+	info, err := os.Stat(devBusUSBPath)
+	if err != nil {
+		return "", "", fmt.Errorf("device %s not found in %s: %w", dev.String(), devBusUSBBasePath, err)
+	}
+
+	if info.Mode()&os.ModeDevice == 0 {
+		return "", "", fmt.Errorf("%s is not a device file", devBusUSBPath)
+	}
+	sysfsDevBasePath := sysfsDevCharBasePath
+	udevDataNamePrefix := "c"
+	if info.Mode()&os.ModeCharDevice == 0 {
+		// not sure if this is necessary - even USB-Sticks are character devices at this level
+		// but since this check is cheap and easy let's keep it in here.
+		sysfsDevBasePath = sysfsDevBlockBasePath
+		udevDataNamePrefix = "b"
+	}
+
+	stat_t, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		panic("os.Stat() returned unexpectet result")
+	}
+
+	sysfsDevPath := filepath.Join(sysfsDevBasePath, fmt.Sprintf("%d:%d", unix.Major(stat_t.Rdev), unix.Minor(stat_t.Rdev)))
+	sysfsDevicesPath, err := os.Readlink(sysfsDevPath)
+	if err != nil {
+		return "", "", fmt.Errorf("could not resolve symlink %s: %w", sysfsDevPath, err)
+	}
+	if !filepath.IsAbs(sysfsDevicesPath) {
+		sysfsDevicesPath = filepath.Join(sysfsDevBasePath, sysfsDevicesPath)
+	}
+
+	udevDataPath := filepath.Join(udevDataBasePath, fmt.Sprintf("%s%d:%d", udevDataNamePrefix, unix.Major(stat_t.Rdev), unix.Minor(stat_t.Rdev)))
+
+	return sysfsDevicesPath, udevDataPath, nil
+}
+
+func splitKeyValue(line string) (string, string, error) {
+	fields := strings.SplitN(line, "=", 2)
+	if len(fields) != 2 {
+		return "", "", errors.New("string does not contain '='")
+	}
+	return fields[0], fields[1], nil
+}
+
+func readUeventFile(device *Device, basePath string) error {
+	file, err := os.Open(filepath.Join(basePath, "uevent"))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		key, value, err := splitKeyValue(line)
+		if err != nil {
+			// silently ignore invalid lines
+			continue
+		}
+		switch key {
+		case "DEVNAME":
+			value = "/dev/" + value
+		}
+
+		device.Udev.Env[key] = value
+	}
+	return scanner.Err()
+}
+
+func readUdevData(device *Device, path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.SplitN(line, ":", 2)
+		if len(fields) != 2 {
+			// silently ignore invalid lines
+			continue
+		}
+		switch fields[0] {
+		case "I":
+			device.Udev.Env["USEC_INITIALIZED"] = fields[1]
+		case "G":
+			device.Udev.Tags = append(device.Udev.Tags, fields[1])
+		case "Q":
+			device.Udev.CurrentTags = append(device.Udev.CurrentTags, fields[1])
+		case "E":
+			key, value, err := splitKeyValue(fields[1])
+			if err == nil {
+				device.Udev.Env[key] = value
+			}
+			// silently ignore invalid lines
+		}
+	}
+	return scanner.Err()
+}
 
 func ListUSBDevices() (map[string]Device, error) {
 	devices, err := usb.List()
@@ -44,7 +163,21 @@ func ListUSBDevices() (map[string]Device, error) {
 	result := make(map[string]Device)
 	for _, device := range devices {
 		d := NewDeviceFromLibUSB(device)
-		// TODO: enhance Device with attributes from udev
+
+		sysfsDevicesPath, udevDataPath, err := USBDeviceToSysfsDevicesAndUdevDataPath(d)
+		if err != nil {
+			wl.Printf("failed to resolve sysfs and udev paths for %s: %v", d.Slug(), err)
+		} else {
+			d.Udev.Env["DEVPATH"] = strings.TrimPrefix(sysfsDevicesPath, "/sys")
+			d.Udev.Env["SUBSYSTEM"] = "usb"
+			if err := readUeventFile(&d, sysfsDevicesPath); err != nil {
+				wl.Printf("failed to read additional attributes from udev/data file for %s: %v", d.Slug(), err)
+			}
+			if err := readUdevData(&d, udevDataPath); err != nil {
+				wl.Printf("failed to read additional attributes from udev/data file for %s: %v", d.Slug(), err)
+			}
+		}
+
 		result[d.Slug()] = d
 	}
 	return result, nil

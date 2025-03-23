@@ -36,6 +36,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sort"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -102,6 +104,18 @@ func run(conf *Config) {
 	}
 	for _, device := range devices {
 		wdl.Printf("found Device: %s", device.String())
+		keys := make([]string, 0, len(device.Udev.Env))
+		for key := range device.Udev.Env {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		wdl.Printf("  Env:")
+		for _, key := range keys {
+			wdl.Printf("    %s = %s", key, device.Udev.Env[key])
+		}
+		wdl.Printf("  Tags: %s", strings.Join(device.Udev.Tags, ", "))
+		wdl.Printf("  Current-Tags: %s", strings.Join(device.Udev.CurrentTags, ", "))
+
 	}
 
 	// list running virtual machines

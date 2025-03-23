@@ -38,7 +38,6 @@ import (
 
 	"github.com/Emposat/usb"
 	"github.com/antchfx/xmlquery"
-	// "github.com/citilinkru/libudev"
 )
 
 const (
@@ -64,7 +63,11 @@ type Device struct {
 	Device    int
 
 	libusb *usb.Device
-	// TODO: add udev attributes
+	Udev   struct {
+		Env         map[string]string
+		Tags        []string
+		CurrentTags []string
+	}
 }
 
 func NewDeviceFromLibUSB(libusb *usb.Device) (d Device) {
@@ -73,6 +76,7 @@ func NewDeviceFromLibUSB(libusb *usb.Device) (d Device) {
 	d.ProductID = libusb.Product.ID
 	d.Bus = libusb.Bus
 	d.Device = libusb.Device
+	d.Udev.Env = make(map[string]string)
 	return
 }
 
@@ -120,6 +124,7 @@ func NewDeviceFromLibVirtHostdev(hostdev *xmlquery.Node) (d Device, err error) {
 	if d.Device, err = intFromString(addr.SelectAttr("device")); err != nil {
 		return
 	}
+	d.Udev.Env = make(map[string]string)
 	return
 }
 
