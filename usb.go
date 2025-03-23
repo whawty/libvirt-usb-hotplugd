@@ -71,7 +71,7 @@ func USBDeviceToSysfsDevicesAndUdevDataPath(dev Device) (string, string, error) 
 
 	stat_t, ok := info.Sys().(*syscall.Stat_t)
 	if !ok {
-		panic("os.Stat() returned unexpectet result")
+		panic("os.Stat() returned unexpected result")
 	}
 
 	sysfsDevPath := filepath.Join(sysfsDevBasePath, fmt.Sprintf("%d:%d", unix.Major(stat_t.Rdev), unix.Minor(stat_t.Rdev)))
