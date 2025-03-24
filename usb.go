@@ -54,9 +54,8 @@ func USBDeviceToSysfsDevicesAndUdevDataPath(dev Device) (string, string, error) 
 	devBusUSBPath := filepath.Join(devBusUSBBasePath, fmt.Sprintf("%03d/%03d", dev.Bus, dev.Device))
 	info, err := os.Stat(devBusUSBPath)
 	if err != nil {
-		return "", "", fmt.Errorf("device %s not found in %s: %w", dev.String(), devBusUSBBasePath, err)
+		return "", "", fmt.Errorf("device %s failed to stat(%s): %w", dev.String(), devBusUSBPath, err)
 	}
-
 	if info.Mode()&os.ModeDevice == 0 {
 		return "", "", fmt.Errorf("%s is not a device file", devBusUSBPath)
 	}
@@ -73,8 +72,10 @@ func USBDeviceToSysfsDevicesAndUdevDataPath(dev Device) (string, string, error) 
 	if !ok {
 		panic("os.Stat() returned unexpected result")
 	}
+	major := unix.Major(stat_t.Rdev)
+	minor := unix.Minor(stat_t.Rdev)
 
-	sysfsDevPath := filepath.Join(sysfsDevBasePath, fmt.Sprintf("%d:%d", unix.Major(stat_t.Rdev), unix.Minor(stat_t.Rdev)))
+	sysfsDevPath := filepath.Join(sysfsDevBasePath, fmt.Sprintf("%d:%d", major, minor))
 	sysfsDevicesPath, err := os.Readlink(sysfsDevPath)
 	if err != nil {
 		return "", "", fmt.Errorf("could not resolve symlink %s: %w", sysfsDevPath, err)
@@ -83,7 +84,7 @@ func USBDeviceToSysfsDevicesAndUdevDataPath(dev Device) (string, string, error) 
 		sysfsDevicesPath = filepath.Join(sysfsDevBasePath, sysfsDevicesPath)
 	}
 
-	udevDataPath := filepath.Join(udevDataBasePath, fmt.Sprintf("%s%d:%d", udevDataNamePrefix, unix.Major(stat_t.Rdev), unix.Minor(stat_t.Rdev)))
+	udevDataPath := filepath.Join(udevDataBasePath, fmt.Sprintf("%s%d:%d", udevDataNamePrefix, major, minor))
 
 	return sysfsDevicesPath, udevDataPath, nil
 }
@@ -105,15 +106,14 @@ func readUeventFile(device *Device, basePath string) error {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := scanner.Text()
-		key, value, err := splitKeyValue(line)
+		key, value, err := splitKeyValue(scanner.Text())
 		if err != nil {
 			// silently ignore invalid lines
 			continue
 		}
 		switch key {
 		case "DEVNAME":
-			value = "/dev/" + value
+			value = filepath.Join("/dev", value)
 		}
 
 		device.Udev.Env[key] = value
@@ -130,8 +130,7 @@ func readUdevData(device *Device, path string) error {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := scanner.Text()
-		fields := strings.SplitN(line, ":", 2)
+		fields := strings.SplitN(scanner.Text(), ":", 2)
 		if len(fields) != 2 {
 			// silently ignore invalid lines
 			continue
@@ -171,10 +170,10 @@ func ListUSBDevices() (map[string]Device, error) {
 			d.Udev.Env["DEVPATH"] = strings.TrimPrefix(sysfsDevicesPath, "/sys")
 			d.Udev.Env["SUBSYSTEM"] = "usb"
 			if err := readUeventFile(&d, sysfsDevicesPath); err != nil {
-				wl.Printf("failed to read additional attributes from udev/data file for %s: %v", d.Slug(), err)
+				wl.Printf("failed to read udev attributes from uevent file for %s: %v", d.Slug(), err)
 			}
 			if err := readUdevData(&d, udevDataPath); err != nil {
-				wl.Printf("failed to read additional attributes from udev/data file for %s: %v", d.Slug(), err)
+				wl.Printf("failed to read udev attributes from udev/data file for %s: %v", d.Slug(), err)
 			}
 		}
 
