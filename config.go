@@ -34,18 +34,30 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
+type UdevEnvMatcher struct {
+	Name    string  `yaml:"name"`
+	Equals  *string `yaml:"equals"`
+	Pattern *string `yaml:"pattern"`
+	re      *regexp.Regexp
+}
+
 type DeviceMatcher struct {
 	Bus       *int    `yaml:"bus"`
 	Device    *int    `yaml:"device"`
 	VendorID  *uint16 `yaml:"vendor-id"`
 	ProductID *uint16 `yaml:"product-id"`
-	// TODO: add matchers for udev attributes
+	Udev      struct {
+		Env         []UdevEnvMatcher `yaml:"env"`
+		Tags        []string         `yaml:"tags"`
+		CurrentTags []string         `yaml:"current-tags"`
+	} `yaml:"udev"`
 }
 
 type MachineConfig struct {
@@ -117,6 +129,44 @@ func (conf *Config) loadMachinesConfigFromDirectory(configfile string) error {
 	return nil
 }
 
+func (conf *Config) initialize() error {
+	for machine, mconf := range conf.Machines {
+		if len(mconf.DeviceMatchers) == 0 {
+			return fmt.Errorf("machine %s has no device matchers", machine)
+		}
+		for idx, matcher := range mconf.DeviceMatchers {
+			if len(matcher.Udev.Env) > 0 {
+				for i, udevEnv := range matcher.Udev.Env {
+					if udevEnv.Name == "" {
+						return fmt.Errorf("device matcher %d of machine %s: udev-env name must not be empty ", idx, machine)
+					}
+					if udevEnv.Equals != nil {
+						if udevEnv.Pattern != nil {
+							return fmt.Errorf("device matcher %d of machine %s: 'equals' and 'pattern' are mutually exclusive ", idx, machine)
+						}
+						continue
+					}
+					if udevEnv.Pattern != nil {
+						re, err := regexp.Compile(*udevEnv.Pattern)
+						if err != nil {
+							return fmt.Errorf("device matcher %d of machine %s: failed to compile pattern: %v", idx, machine, err)
+						}
+						matcher.Udev.Env[i].re = re
+						continue
+					}
+					return fmt.Errorf("device matcher %d of machine %s: udev-env needs at least one of 'equals' or 'pattern'", idx, machine)
+				}
+			} else {
+				if matcher.Bus == nil && matcher.Device == nil && matcher.VendorID == nil && matcher.ProductID == nil && len(matcher.Udev.Tags) == 0 && len(matcher.Udev.CurrentTags) == 0 {
+					return fmt.Errorf("device matcher %d of machine %s: empty matcher is not allowed", idx, machine)
+				}
+			}
+		}
+	}
+	return nil
+
+}
+
 func readConfig(configfile string) (*Config, error) {
 	file, err := os.Open(configfile)
 	if err != nil {
@@ -137,6 +187,8 @@ func readConfig(configfile string) (*Config, error) {
 	if err = c.loadMachinesConfigFromDirectory(configfile); err != nil {
 		return nil, err
 	}
-	// TODO: sanity check matchers??
+	if err = c.initialize(); err != nil {
+		return nil, err
+	}
 	return c, nil
 }

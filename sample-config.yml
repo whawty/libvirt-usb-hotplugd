@@ -2,11 +2,25 @@
 machines:
   foo:
     devices:
-    - vendor-id: 0x046d
-      product-id: 0xc08e
-    - vendor-id: 0x3434
-      product-id: 0x0211
+    - vendor-id: 0x12d1
+      product-id: 0x1f01
+    - vendor-id: 0x12d1
+      product-id: 0x1442
   bar:
     devices:
-    - vendor-id: 0x07fd
-      product-id: 0x0008
+    - udev:
+        env:
+        - name: ID_VENDOR
+          equals: ftdi
+        - name: ID_MODEL
+          equals: usb_serial_converter
+        - name: ID_SERIAL_SHORT
+          equals: ftIdOOt7
+  video:
+    devices:
+    - vendor-id: 0x046d
+      product-id: 0x0825
+      udev:
+        env:
+        - name: ID_USB_SERIAL_SHORT
+          pattern: '^3187B6[01]$'

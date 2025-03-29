@@ -32,6 +32,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -160,6 +161,28 @@ func (d *Device) Matches(matcher DeviceMatcher) bool {
 	}
 	if matcher.ProductID != nil && *matcher.ProductID != d.ProductID {
 		return false
+	}
+	for _, env := range matcher.Udev.Env {
+		value, exists := d.Udev.Env[env.Name]
+		if !exists {
+			return false
+		}
+		if env.Equals != nil && *env.Equals != value {
+			return false
+		}
+		if env.re != nil && !env.re.MatchString(value) {
+			return false
+		}
+	}
+	for _, tag := range matcher.Udev.Tags {
+		if !slices.Contains(d.Udev.Tags, tag) {
+			return false
+		}
+	}
+	for _, tag := range matcher.Udev.CurrentTags {
+		if !slices.Contains(d.Udev.CurrentTags, tag) {
+			return false
+		}
 	}
 	return true
 }
