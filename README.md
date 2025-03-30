@@ -100,10 +100,10 @@ E: CURRENT_TAGS=:snap_cups_ippeveprinter:snap_cups_cupsd:
 
 Every line starting with `E:` contains an environment variable that might
 be used to match the device. An exception to this rule are `TAGS` and
-`CURRENT_TAGS`. Matching against tags is also possible but done i a sligtly
+`CURRENT_TAGS`. Matching against tags is also possible but done in a sligtly
 different way.
 
-Given the above example the thefollowing config file can be used to
+Given the above example the following config file can be used to
 pass the USB webcam to a virtual machine called `webcam-test` in libvirt:
 
 ```
@@ -129,3 +129,33 @@ run the daemon in debug mode:
 ```
 WHAWTY_LIBVIRT_USB_HOTPLUGD_DEBUG=1  ./whawty-libvirt-usb-hotplugd my-config.yml
 ```
+
+The configuration file can be broken up into several files for easier management. For
+this the daemon looks for a directory named `machines.d` in the same directory as the main
+configuration file. Any file ending with `.yml` corresponds to a virtual machine. The name
+of the machine is extracted from the file name and the contents must be the device matchers.
+For example the configuration above could be split up into two files:
+
+The main file `/path/to/global.yml`
+
+```
+interval: 5s
+machines: {}
+```
+
+and the machine specific snippet `/path/to/machines.d/webcam-test.yml`:
+
+```
+devices:
+- vendor-id: 0x046d
+  product-id: 0x0825
+  udev:
+    env:
+    - name: ID_USB_SERIAL_SHORT
+      equals: '<redacted-serial>'
+```
+
+Machines defined in the `/path/to/global.yml` would be merged with the ones found in the
+`/path/to/machines.d/`. In case a machine is found in the main config file as well as in
+the `machines.d` directory the latter will take precedence and overwrite the matchers
+found in the main configuration (they won't get merged together).
