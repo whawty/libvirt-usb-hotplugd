@@ -103,6 +103,19 @@ be used to match the device. An exception to this rule are `TAGS` and
 `CURRENT_TAGS`. Matching against tags is also possible but done in a sligtly
 different way.
 
+Another way to find the variable names and tags avaialable is to
+run the daemon in debug mode:
+
+```
+WHAWTY_LIBVIRT_USB_HOTPLUGD_DEBUG=1  ./whawty-libvirt-usb-hotplugd config.yml
+```
+
+
+## How do i configure it?
+
+The daemon takes the path to a single configuration file as it's first
+and only argument.
+
 Given the above example the following config file can be used to
 pass the USB webcam to a virtual machine called `webcam-test` in libvirt:
 
@@ -122,13 +135,6 @@ machines:
 Besides `equals` you can also use a regular expression to match against
 the value of the given environment variable. See the [example configuration](sample-config.yml)
 to see how this is done.
-
-Another way to find the variable names and tags avaialable is to
-run the daemon in debug mode:
-
-```
-WHAWTY_LIBVIRT_USB_HOTPLUGD_DEBUG=1  ./whawty-libvirt-usb-hotplugd my-config.yml
-```
 
 The configuration file can be broken up into several files for easier management. For
 this the daemon looks for a directory named `machines.d` in the same directory as the main
