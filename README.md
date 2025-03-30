@@ -22,7 +22,7 @@ and tag exposed by udev. This is very useful for devices that have
 a unique serial number and the device driver exposes this number to
 udev.
 Udev environment variables and tags are read from the uevent file in
-sysfs as well as the udev data directy. The resulting environment
+sysfs as well as the udev data directory. The resulting environment
 variable names should be the same as can be queried using `udevadm`.
 
 To find out the names and values of those variables first find the
@@ -172,6 +172,9 @@ Machines defined in the `/path/to/global.yml` would be merged with the ones foun
 `/path/to/machines.d/`. In case a machine is found in the main config file as well as in
 the `machines.d` directory the latter will take precedence and overwrite the matchers
 found in the main configuration (they won't get merged together).
+
+Upon receiving the singal `SIGHUP` the configuration will be re-read. In case the
+new configuration has errors the current configuraton will be kept.
 
 
 ## One last thing.

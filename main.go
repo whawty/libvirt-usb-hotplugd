@@ -82,14 +82,21 @@ func reconcile(conf *Config, devices map[string]Device, machines map[string]Mach
 
 		// detach stale devices
 		for _, device := range machine.Devices {
-			if _, exists := devices[device.Slug()]; exists {
-				continue
+			match := false
+			if d, exists := devices[device.Slug()]; exists {
+				for _, matcher := range mconf.DeviceMatchers {
+					if d.Matches(matcher) {
+						match = true
+					}
+				}
 			}
-			err := DetachDeviceFromVirtualMachine(machine, device)
-			if err != nil {
-				wl.Printf("failed to detach device '%s' from machine '%s': %v", device.String(), mname, err)
-			} else {
-				wl.Printf("successfully detached device '%s' from machine '%s'", device.String(), mname)
+			if !match {
+				err := DetachDeviceFromVirtualMachine(machine, device)
+				if err != nil {
+					wl.Printf("failed to detach device '%s' from machine '%s': %v", device.String(), mname, err)
+				} else {
+					wl.Printf("successfully detached device '%s' from machine '%s'", device.String(), mname)
+				}
 			}
 		}
 	}
