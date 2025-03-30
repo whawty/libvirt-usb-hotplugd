@@ -154,9 +154,9 @@ The main file `/path/to/global.yml`
 interval: 5s
 machines: {}
 ```
-Please mind taht since 5 seconds is the default interval you might as well use `{}` as
-the only contents of the configuration.
-You can add then add the machine specific snippet `/path/to/machines.d/webcam-test.yml`:
+Please mind that since 5 seconds is the default interval you might as well use `{}` as
+the only contents of the main configuration.
+The second file for this example is the machine specific snippet `/path/to/machines.d/webcam-test.yml`:
 
 ```yaml
 devices:
@@ -172,3 +172,14 @@ Machines defined in the `/path/to/global.yml` would be merged with the ones foun
 `/path/to/machines.d/`. In case a machine is found in the main config file as well as in
 the `machines.d` directory the latter will take precedence and overwrite the matchers
 found in the main configuration (they won't get merged together).
+
+
+## One last thing.
+
+There is a bit of a gotcha in the way libvirt-usb-hotplugd treats `<hostdev>` entries in the
+domain XML of virtual machines. It assumes that every `<hostdev>` entry with `type=usb` has been
+added by the daemon. This means if there are `<hostdev type=usb>` entries found in the current
+domain XML that reference a device that is no longer attached to the host it will detach the
+`<hostdev>` from the libvirt domain. This means you can not mix "statically" assigned
+`<hostdev type=usb>` entries with libvirt-usb-hotplugd. `<hostdev>` entries of any other type are
+ingored. Also machines that are not found in the configuration are ignored.
