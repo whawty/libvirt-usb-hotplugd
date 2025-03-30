@@ -8,7 +8,7 @@ libvirt-based virtual machines.
 Every check interval libvirt-usb-hotplugd creates a list of all USB
 devices connected to the host. It then compares the device attributes
 to a list of configured matchers for a given virtual machine. If the
-device attributes are a match this device is than attached to the
+device attributes are a match this device is then attached to the
 virtual machine using libvirt. It also removes devices from virtual
 machines that no longer match the configured attributes.
 Devices can be matched by a multitude of attributes. The simpliest
@@ -23,10 +23,10 @@ a unique serial number and the device driver exposes this number to
 udev.
 Udev environment variables and tags are read from the uevent file in
 sysfs as well as the udev data directy. The resulting environment
-variable names should be the same as can be queried using udevadm.
+variable names should be the same as can be queried using `udevadm`.
 
 To find out the names and values of those variables first find the
-bus and device number of the device using lsusb:
+bus and device number of the device using `lsusb`:
 
 ```
 equinox@ws ~ % lsusb
@@ -40,13 +40,12 @@ Bus 003 Device 007: ID 3434:0211 Keychron Keychron K1 Pro
 Bus 004 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
 ```
 
-Let's say we want to pass the Logitech Webcam to a virtual machine.
-These device is currently connected to bus `003` and uses the device
+Let's say we want to pass the Logitech webcam to a virtual machine.
+This device is currently connected to bus `003` and uses the device
 number `005`. To find out what udev enviroment variables exist run this
 command:
 
 ```
-
 equinox@ws ~ % udevadm info --query=all --name /dev/bus/usb/003/005
 P: /devices/pci0000:00/0000:00:01.2/0000:02:00.0/0000:03:08.0/0000:06:00.3/usb3/3-6/3-6.3
 M: 3-6.3
@@ -99,15 +98,22 @@ E: CURRENT_TAGS=:snap_cups_ippeveprinter:snap_cups_cupsd:
 ```
 
 Every line starting with `E:` contains an environment variable that might
-be used to match the device. An exception to this rule are `TAGS` and
+be used to match the device. Exceptions to this rule are `TAGS` and
 `CURRENT_TAGS`. Matching against tags is also possible but done in a sligtly
 different way.
 
-Another way to find the variable names and tags avaialable is to
-run the daemon in debug mode:
+Another way to find the variable names and tags available is to run the daemon
+in debug mode:
 
 ```
 WHAWTY_LIBVIRT_USB_HOTPLUGD_DEBUG=1  ./whawty-libvirt-usb-hotplugd config.yml
+```
+
+Please mind that the daemon won't start with an empty configuration file. You
+can work around this issue by putting the following line into `config.yml`.
+
+```yaml
+{}
 ```
 
 
@@ -119,7 +125,7 @@ and only argument.
 Given the above example the following config file can be used to
 pass the USB webcam to a virtual machine called `webcam-test` in libvirt:
 
-```
+```yaml
 interval: 5s
 machines:
   webcam-test:
@@ -144,14 +150,15 @@ For example the configuration above could be split up into two files:
 
 The main file `/path/to/global.yml`
 
-```
+```yaml
 interval: 5s
 machines: {}
 ```
+Please mind taht since 5 seconds is the default interval you might as well use `{}` as
+the only contents of the configuration.
+You can add then add the machine specific snippet `/path/to/machines.d/webcam-test.yml`:
 
-and the machine specific snippet `/path/to/machines.d/webcam-test.yml`:
-
-```
+```yaml
 devices:
 - vendor-id: 0x046d
   product-id: 0x0825
