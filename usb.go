@@ -54,7 +54,7 @@ func USBDeviceToSysfsDevicesAndUdevDataPath(dev Device) (string, string, error) 
 	devBusUSBPath := filepath.Join(devBusUSBBasePath, fmt.Sprintf("%03d/%03d", dev.Bus, dev.Device))
 	info, err := os.Stat(devBusUSBPath)
 	if err != nil {
-		return "", "", fmt.Errorf("device %s failed to stat(%s): %w", dev.String(), devBusUSBPath, err)
+		return "", "", fmt.Errorf("device %s failed to stat(%s): %v", dev.String(), devBusUSBPath, err)
 	}
 	if info.Mode()&os.ModeDevice == 0 {
 		return "", "", fmt.Errorf("%s is not a device file", devBusUSBPath)
@@ -78,7 +78,7 @@ func USBDeviceToSysfsDevicesAndUdevDataPath(dev Device) (string, string, error) 
 	sysfsDevPath := filepath.Join(sysfsDevBasePath, fmt.Sprintf("%d:%d", major, minor))
 	sysfsDevicesPath, err := os.Readlink(sysfsDevPath)
 	if err != nil {
-		return "", "", fmt.Errorf("could not resolve symlink %s: %w", sysfsDevPath, err)
+		return "", "", fmt.Errorf("could not resolve symlink %s: %v", sysfsDevPath, err)
 	}
 	if !filepath.IsAbs(sysfsDevicesPath) {
 		sysfsDevicesPath = filepath.Join(sysfsDevBasePath, sysfsDevicesPath)
@@ -102,7 +102,7 @@ func readUeventFile(device *Device, basePath string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -126,7 +126,7 @@ func readUdevData(device *Device, path string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {

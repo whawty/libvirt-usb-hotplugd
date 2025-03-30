@@ -90,7 +90,7 @@ func ListVirtualMachines() (map[string]Machine, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer l.Disconnect()
+	defer l.Disconnect() //nolint:errcheck
 
 	domains, _, err := l.ConnectListAllDomains(1, libvirt.ConnectListDomainsRunning)
 	if err != nil {
@@ -114,7 +114,7 @@ func AttachDeviceToVirtualMachine(machine Machine, device Device) error {
 	if err != nil {
 		return err
 	}
-	defer l.Disconnect()
+	defer l.Disconnect() //nolint:errcheck
 
 	xml, err := device.HostDevXML()
 	if err != nil {
@@ -128,7 +128,7 @@ func DetachDeviceFromVirtualMachine(machine Machine, device Device) error {
 	if err != nil {
 		return err
 	}
-	defer l.Disconnect()
+	defer l.Disconnect() //nolint:errcheck
 
 	xml, err := device.HostDevXML()
 	if err != nil {

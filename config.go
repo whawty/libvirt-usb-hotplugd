@@ -72,9 +72,9 @@ type Config struct {
 func (conf *Config) loadMachineConfigFromFile(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
-		return fmt.Errorf("Error opening config file: %s", err)
+		return fmt.Errorf("failed to open config snippet: %v", err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	mname := strings.TrimSuffix(filepath.Base(filename), ".yml")
 	mconf := &MachineConfig{}
@@ -82,7 +82,7 @@ func (conf *Config) loadMachineConfigFromFile(filename string) error {
 	decoder := yaml.NewDecoder(file)
 	decoder.KnownFields(true)
 	if err = decoder.Decode(mconf); err != nil {
-		return fmt.Errorf("Error parsing config snippet '%s': %s", filename, err)
+		return fmt.Errorf("failed to parse config snippet '%s': %v", filename, err)
 	}
 	if _, exists := conf.Machines[mname]; exists {
 		wl.Printf("machine '%s' has been found in the global config file as well as in machines.d directory. The latter takes precedence", mname)
@@ -170,16 +170,16 @@ func (conf *Config) initialize() error {
 func readConfig(configfile string) (*Config, error) {
 	file, err := os.Open(configfile)
 	if err != nil {
-		return nil, fmt.Errorf("Error opening config file: %s", err)
+		return nil, fmt.Errorf("failed to open config file: %s", err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	decoder := yaml.NewDecoder(file)
 	decoder.KnownFields(true)
 
 	c := &Config{}
 	if err = decoder.Decode(c); err != nil {
-		return nil, fmt.Errorf("Error parsing config file: %s", err)
+		return nil, fmt.Errorf("failed to parse config file: %s", err)
 	}
 	if c.Interval == 0 {
 		c.Interval = 5 * time.Second
