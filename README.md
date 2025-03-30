@@ -177,12 +177,13 @@ Upon receiving the singal `SIGHUP` the configuration will be re-read. In case th
 new configuration has errors the current configuraton will be kept.
 
 
-## One last thing.
+## One last thing...
 
 There is a bit of a gotcha in the way libvirt-usb-hotplugd treats `<hostdev>` entries in the
 domain XML of virtual machines. It assumes that every `<hostdev>` entry with `type=usb` has been
 added by the daemon. This means if there are `<hostdev type=usb>` entries found in the current
-domain XML that reference a device that is no longer attached to the host it will detach the
-`<hostdev>` from the libvirt domain. This means you can not mix "statically" assigned
-`<hostdev type=usb>` entries with libvirt-usb-hotplugd. `<hostdev>` entries of any other type are
-ingored. Also machines that are not found in the configuration are ignored.
+domain XML that reference a device that is no longer attached to the host or does not match the
+configured matchers it will be detached from the libvirt domain. This means you can not mix
+"statically" assigned `<hostdev type=usb>` entries with libvirt-usb-hotplugd. However `<hostdev>`
+entries of any other type are ingored. Also machines that are not found in the configuration are
+ignored.
