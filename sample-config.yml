@@ -24,3 +24,10 @@ machines:
         env:
         - name: ID_USB_SERIAL_SHORT
           pattern: '^3187B6[01]$'
+  blub:
+    devices:
+    - vendor-id: 0x046d
+      product-id: 0x0825
+      udev:
+        tags:
+        - some-tag
