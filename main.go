@@ -75,7 +75,7 @@ func reconcile(conf *Config, devices map[string]Device, machines map[string]Mach
 				if err != nil {
 					wl.Printf("failed to attach device '%s' to machine '%s': %v", device.String(), mname, err)
 				} else {
-					wl.Printf("sucessfully attached device '%s' to machine '%s'", device.String(), mname)
+					wl.Printf("successfully attached device '%s' to machine '%s'", device.String(), mname)
 				}
 			}
 		}
@@ -152,7 +152,7 @@ func main() {
 		os.Exit(1)
 	}
 	wl.Printf("starting...")
-	// do one intial run so potential problems show up immediatly
+	// do one initial run so potential problems show up immediately
 	run(conf)
 
 	sigs := make(chan os.Signal, 1)
