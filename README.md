@@ -2,8 +2,8 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/whawty/libvirt-usb-hotplugd)](https://goreportcard.com/report/github.com/whawty/libvirt-usb-hotplugd)
 
-Daemon that automatically attaches and detaches USB devices from
-libvirt-based virtual machines.
+Daemon that automatically attaches and detaches USB devices to and
+from libvirt-based virtual machines.
 
 ## How does it work?
 
