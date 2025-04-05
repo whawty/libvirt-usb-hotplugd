@@ -57,7 +57,7 @@ func reconcile(conf *Config, devices map[string]Device, machines map[string]Mach
 	for mname, mconf := range conf.Machines {
 		machine, exists := machines[mname]
 		if !exists {
-			wdl.Printf("skipping machine '%s' which is found in the configuration but is not running or missing in libvirt", mname)
+			wdl.Printf("skipping machine '%s' which is listed in the configuration but is not running or missing in libvirt", mname)
 			continue
 		}
 
@@ -126,7 +126,7 @@ func run(conf *Config) {
 	}
 
 	// list running virtual machines
-	machines, err := ListVirtualMachines()
+	machines, err := ListVirtualMachines(conf)
 	if err != nil {
 		wl.Printf("failed to list virtual machines: %v", err)
 		return

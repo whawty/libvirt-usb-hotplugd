@@ -85,20 +85,23 @@ func NewVirshConnection() (*libvirt.Libvirt, error) {
 	return l, nil
 }
 
-func ListVirtualMachines() (map[string]Machine, error) {
+func ListVirtualMachines(conf *Config) (map[string]Machine, error) {
 	l, err := NewVirshConnection()
 	if err != nil {
 		return nil, err
 	}
 	defer l.Disconnect() //nolint:errcheck
 
-	domains, _, err := l.ConnectListAllDomains(1, libvirt.ConnectListDomainsRunning)
-	if err != nil {
-		return nil, err
-	}
-
 	machines := make(map[string]Machine)
-	for _, domain := range domains {
+	for mname, _ := range conf.Machines {
+		domain, err := l.DomainLookupByName(mname)
+		if err != nil {
+			if libvirt.IsNotFound(err) {
+				continue
+			}
+			return nil, err
+		}
+
 		machine, err := MachineFromLibvirtDomain(l, domain)
 		if err != nil {
 			return nil, err
