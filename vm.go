@@ -93,7 +93,7 @@ func ListActiveVirtualMachines(conf *Config) (map[string]Machine, error) {
 	defer l.Disconnect() //nolint:errcheck
 
 	machines := make(map[string]Machine)
-	for mname, _ := range conf.Machines {
+	for mname := range conf.Machines {
 		domain, err := l.DomainLookupByName(mname)
 		if err != nil {
 			if libvirt.IsNotFound(err) {
