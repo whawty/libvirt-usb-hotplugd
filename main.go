@@ -126,7 +126,7 @@ func run(conf *Config) {
 	}
 
 	// list running virtual machines
-	machines, err := ListVirtualMachines(conf)
+	machines, err := ListActiveVirtualMachines(conf)
 	if err != nil {
 		wl.Printf("failed to list virtual machines: %v", err)
 		return

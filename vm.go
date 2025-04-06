@@ -85,7 +85,7 @@ func NewVirshConnection() (*libvirt.Libvirt, error) {
 	return l, nil
 }
 
-func ListVirtualMachines(conf *Config) (map[string]Machine, error) {
+func ListActiveVirtualMachines(conf *Config) (map[string]Machine, error) {
 	l, err := NewVirshConnection()
 	if err != nil {
 		return nil, err
@@ -100,6 +100,13 @@ func ListVirtualMachines(conf *Config) (map[string]Machine, error) {
 				continue
 			}
 			return nil, err
+		}
+		state, err := l.DomainIsActive(domain)
+		if err != nil {
+			return nil, err
+		}
+		if state == 0 {
+			continue
 		}
 
 		machine, err := MachineFromLibvirtDomain(l, domain)
