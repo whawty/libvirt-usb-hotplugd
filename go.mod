@@ -1,24 +1,24 @@
 module github.com/whawty/libvirt-usb-hotplugd
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/Emposat/usb v0.0.0-20220619103411-96ba11ee54be
-	github.com/antchfx/xmlquery v1.5.1
-	github.com/digitalocean/go-libvirt v0.0.0-20260609165003-6254771e63a8
-	golang.org/x/sys v0.46.0
+	github.com/antchfx/xmlquery v1.5.2
+	github.com/digitalocean/go-libvirt v0.0.0-20261013170128-efbbdf578ac8
+	golang.org/x/sys v0.49.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
-	github.com/antchfx/xpath v1.3.6 // indirect
+	github.com/antchfx/xpath v1.3.9 // indirect
 	github.com/apex/log v1.9.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/mattn/go-colorable v0.1.15 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-colorable v0.1.16 // indirect
+	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 )
