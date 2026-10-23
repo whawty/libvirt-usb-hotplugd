@@ -10,13 +10,18 @@ jobs:
       matrix:
         goos: [linux]
         goarch: ["386", amd64, arm64]
+        include:
+        - goos: linux
+          goarch: arm
+          goarm: "7"
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: wangyoucao577/go-release-action@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
+        goarm: ${{ matrix.goarm }}
         project_path: "."
         binary_name: "whawty-libvirt-usb-hotplugd"
         pre_command: export CGO_ENABLED=0
